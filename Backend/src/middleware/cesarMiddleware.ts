@@ -4,9 +4,9 @@ import { promisePool } from '../db/db';
 export const cifraDeCesarMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { hash, mensagem, usuario_id } = req.body;
 
-  if (typeof hash !== 'number' || typeof mensagem !== 'string' || typeof usuario_id !== 'number') {
+  if (typeof hash !== 'string' || typeof mensagem !== 'string' || typeof usuario_id !== 'number') {
     res.status(400).json({
-      error: 'Esperado: hash (number), mensagem (string) e usuario_id (number).'
+      error: 'Esperado: hash (string), mensagem (string) e usuario_id (number).'
     });
     return;
   }
