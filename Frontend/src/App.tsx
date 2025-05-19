@@ -1,19 +1,16 @@
-import { Container } from './components/Container';
-import { Login } from './pages/Login';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/register';
 
-import './styles/theme.css';
-import './styles/global.css';
-
-
-
-
-export function App() {
+function App() {
   return (
-      <Container>
-        <Login />
-      </Container>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </Router>
   );
 }
-
 export default App;
 
