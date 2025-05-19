@@ -10,12 +10,14 @@ export function Register() {
   const navigate = useNavigate();
 
   return (
-    <form>
-      <div className={styles.logo}>
-        <a className={styles.logoLink} href="#">
-          <KeyRound />
-          <span>Cadastro</span>
-        </a>
+    <div className={styles.container}>
+      <form className={styles.form}>
+        <div className={styles.logo}>
+          <a className={styles.logoLink} href="#">
+            <KeyRound />
+            <span>Cadastro</span>
+          </a>
+        </div>
 
         <input
           type="text"
@@ -40,15 +42,14 @@ export function Register() {
           <span>Cadastrar</span>
         </button>
 
-        <button
-          type="button"
-          className={styles.button}
-          onClick={() => navigate('/login')}
-        >
-          <span>Voltar ao login</span>
-        </button>
-      </div>
-    </form>
+        <p className={styles.registerText}>
+          Já possui uma conta?{' '}
+          <a onClick={() => navigate('/login')} className={styles.link}>
+            Voltar ao login
+          </a>
+        </p>
+      </form>
+    </div>
   );
 }
 
