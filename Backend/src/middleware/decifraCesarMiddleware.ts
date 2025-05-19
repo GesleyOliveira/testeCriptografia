@@ -1,46 +1,57 @@
-import { Request, Response, NextFunction } from 'express'
-import { promisePool } from '../db/db'
+import { Request, Response, NextFunction } from 'express';
+import { promisePool } from '../db/db';
 
 export const decifraMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { mensagemCriptografada } = req.body
+  const { mensagemCriptografada } = req.body;
 
   if (typeof mensagemCriptografada !== 'string') {
-    res.status(400).json({ error: 'Esperado: mensagemCriptografada (string).' })
-    return
+    res.status(400).json({ error: 'Esperado: mensagemCriptografada (string).' });
+    return;
   }
 
   try {
+    // Busca o valor_hash e os passos do hash relacionado à mensagem
     const [rows] = await promisePool.query(
-      'SELECT valor_hash FROM mensagens WHERE mensagem = ? LIMIT 1',
+      `
+      SELECT h.id AS hash_id, h.passos
+      FROM mensagens m
+      INNER JOIN hashes h ON m.valor_hash = h.id
+      WHERE m.mensagem = ?
+      LIMIT 1
+      `,
       [mensagemCriptografada]
-    )
+    ) as any;
 
     if (!Array.isArray(rows) || rows.length === 0) {
-      res.status(404).json({ error: 'Mensagem criptografada não encontrada no banco.' })
-      return
+      res.status(404).json({ error: 'Mensagem criptografada não encontrada no banco.' });
+      return;
     }
 
-    const hash = (rows[0] as any).valor_hash as number
+    const { hash_id, passos } = rows[0];
 
+    // Função para decifrar (Cifra de César reversa)
     const decifra = (texto: string, deslocamento: number): string => {
       return texto.split('').map(char => {
         if (/[a-z]/.test(char)) {
-          return String.fromCharCode(((char.charCodeAt(0) - 97 - deslocamento + 26) % 26) + 97)
+          return String.fromCharCode(((char.charCodeAt(0) - 97 - deslocamento + 26) % 26) + 97);
         }
         if (/[A-Z]/.test(char)) {
-          return String.fromCharCode(((char.charCodeAt(0) - 65 - deslocamento + 26) % 26) + 65)
+          return String.fromCharCode(((char.charCodeAt(0) - 65 - deslocamento + 26) % 26) + 65);
         }
-        return char
-      }).join('')
-    }
+        return char;
+      }).join('');
+    };
 
-    const mensagemOriginal = decifra(mensagemCriptografada, hash)
+    const mensagemOriginal = decifra(mensagemCriptografada, passos);
 
-    req.body.hash = hash
-    req.body.mensagemOriginal = mensagemOriginal
-    next()
+    // Anexa dados ao request para o próximo middleware ou rota
+    req.body.hash = hash_id;
+    req.body.passos = passos;
+    req.body.mensagemOriginal = mensagemOriginal;
+
+    next();
   } catch (err) {
-    console.error('Erro no middleware de decifra:', err)
-    res.status(500).json({ error: 'Erro interno ao descriptografar a mensagem.' })
+    console.error('Erro no middleware de decifra:', err);
+    res.status(500).json({ error: 'Erro interno ao descriptografar a mensagem.' });
   }
-}
+};
