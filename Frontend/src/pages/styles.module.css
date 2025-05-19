@@ -63,3 +63,47 @@
     background: var(--error);
     color: var(--text-over-error);
   }
+
+  .container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--bg);
+  padding: 2rem;
+}
+
+.form {
+  background: white;
+  padding: 2.4rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+input {
+  padding: 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.registerText {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.link {
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: #333;
+}

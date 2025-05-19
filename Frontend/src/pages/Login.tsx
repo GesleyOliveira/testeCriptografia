@@ -9,12 +9,14 @@ export function Login() {
   const navigate = useNavigate();
 
   return (
-    <form>
-      <div className={styles.logo}>
-        <a className={styles.logoLink} href="#">
-          <Key />
-          <span>Login</span>
-        </a>
+    <div className={styles.container}>
+      <form className={styles.form}>
+        <div className={styles.logo}>
+          <a className={styles.logoLink} href="#">
+            <Key />
+            <span>Login</span>
+          </a>
+        </div>
 
         <input
           type="text"
@@ -33,15 +35,14 @@ export function Login() {
           <span>Entrar</span>
         </button>
 
-        <button
-          type="button"
-          className={styles.button}
-          onClick={() => navigate('/register')}
-        >
-          <span>Registrar</span>
-        </button>
-      </div>
-    </form>
+        <p className={styles.registerText}>
+          Não tem conta?{' '}
+          <a onClick={() => navigate('/register')} className={styles.link}>
+            Registre-se
+          </a>
+        </p>
+      </form>
+    </div>
   );
 }
 
