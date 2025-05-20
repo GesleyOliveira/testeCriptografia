@@ -160,7 +160,6 @@ export function Home() {
           <div key={msg.valor_hash} className={styles.messageItem}>
             <p><strong>Mensagem criptografada:</strong> {msg.content}</p>
             <p><strong>Hash:</strong> {msg.valor_hash}</p>
-            <p><strong>Passo:</strong> {msg.step}</p>
             {msg.decrypted && <p className={styles.decrypted}><strong>Descriptografado:</strong> {msg.decrypted}</p>}
             {msg.used && <p style={{ color: 'red' }}><strong>Hash já utilizado</strong></p>}
           </div>

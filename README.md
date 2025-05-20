@@ -1,8 +1,6 @@
 
 # Cripto César - Aplicação de Criptografia e Autenticação
 
-![ShieldCheck Icon](https://lucide.dev/icons/shield-check.svg)
-
 ## Descrição
 
 Projeto frontend e backend para criptografar e descriptografar mensagens utilizando a cifra de César. Também inclui funcionalidades de cadastro e login de usuários.
