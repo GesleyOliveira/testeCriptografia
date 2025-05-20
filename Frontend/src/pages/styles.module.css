@@ -135,3 +135,21 @@ input {
   font-size: 0.85rem;
   margin-top: 0.5rem;
 }
+
+.messageItem {
+  background-color: #f0f0f0; /* cor de fundo mais visível */
+  color: #333; /* cor de texto mais escura */
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.decrypted {
+  background-color: #e0ffe0; /* fundo verde claro para diferenciar */
+  color: #1b5e20; /* verde escuro para texto descriptografado */
+  padding: 8px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-weight: bold;
+}
