@@ -1,70 +1,124 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './styles.module.css';
 import { ShieldCheck } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid'; // UUID para gerar hashes únicos
+import axios from 'axios';
 
 interface MessageItem {
-  id: string;
+  id: number;
   content: string;
-  hash: string;
+  valor_hash: string;
   step: number;
   decrypted?: string;
   used?: boolean;
 }
 
 export function Home() {
+  const [usuarioId, setUsuarioId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [step, setStep] = useState(1);
   const [encryptedMessages, setEncryptedMessages] = useState<MessageItem[]>([]);
-  const [decryptInput, setDecryptInput] = useState({ content: '', hash: '' });
+  const [decryptInput, setDecryptInput] = useState({ content: '', valor_hash: '' });
+  const [error, setError] = useState('');
 
-  const caesarCipher = (text: string, shift: number) => {
-    return text.replace(/[a-z]/gi, (char) => {
-      const start = char === char.toUpperCase() ? 65 : 97;
-      return String.fromCharCode(
-        ((char.charCodeAt(0) - start + shift + 26) % 26) + start
-      );
-    });
-  };
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('usuario_id');
+    if (storedUserId) {
+      setUsuarioId(Number(storedUserId));
+    } else {
+      setError('Usuário não autenticado.');
+      // Se quiser, pode redirecionar para login aqui também
+    }
+  }, []);
 
-  const handleEncrypt = () => {
-    if (!message || !step) return;
+  useEffect(() => {
+    if (!usuarioId) return;
 
-    const encrypted = caesarCipher(message, step);
-    const hash = uuidv4(); // gera um hash único
+    axios.get(`http://localhost:3000/mensagens/${usuarioId}`)
+      .then(res => {
+        const msgs = res.data.mensagens.map((m: any) => ({
+          id: m.id,
+          content: m.mensagemCriptografada,
+          valor_hash: m.hash,
+          step: 0,
+          used: false,
+        }));
+        setEncryptedMessages(msgs);
+      })
+      .catch(() => setError('Erro ao buscar mensagens'));
+  }, [usuarioId]);
 
-    const newMessage: MessageItem = {
-      id: hash,
-      content: encrypted,
-      hash,
-      step,
-      used: false,
-    };
-
-    setEncryptedMessages(prev => [newMessage, ...prev]);
-    setMessage('');
-    setStep(1);
-  };
-
-  const handleDecrypt = () => {
-    const found = encryptedMessages.find(
-      msg => msg.hash === decryptInput.hash && !msg.used
-    );
-
-    if (!found) {
-      alert('Hash inválido ou já utilizado.');
+  const handleEncrypt = async () => {
+    setError('');
+    if (!message || !step) {
+      setError('Mensagem e passo são obrigatórios');
       return;
     }
 
-    const decrypted = caesarCipher(decryptInput.content, -found.step);
+    // Gerar hash local para enviar (pode ser uuid ou qualquer string única)
+    const valor_hash = crypto.randomUUID();
 
-    setEncryptedMessages(prev =>
-      prev.map(msg =>
-        msg.hash === decryptInput.hash ? { ...msg, used: true, decrypted } : msg
-      )
+    try {
+      const res = await axios.post('http://localhost:3000/criptografar', {
+        valor_hash,
+        mensagem: message,
+        usuario_id: usuarioId,
+        passos: step,
+      });
+
+      // Resposta com a mensagem criptografada e hash
+      const { mensagemCriptografada } = res.data;
+
+      setEncryptedMessages(prev => [
+        {
+          id: Math.random(), // temporário, no seu caso pegue do DB se retornar
+          content: mensagemCriptografada,
+          valor_hash,
+          step,
+          used: false,
+        },
+        ...prev,
+      ]);
+
+      setMessage('');
+      setStep(1);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao criptografar');
+    }
+  };
+
+  const handleDecrypt = async () => {
+    setError('');
+    const found = encryptedMessages.find(
+      msg => msg.valor_hash === decryptInput.valor_hash && !msg.used
     );
 
-    setDecryptInput({ content: '', hash: '' });
+    if (!found) {
+      setError('Hash inválido ou já utilizado.');
+      return;
+    }
+
+    try {
+      const res = await axios.post('http://localhost:3000/descriptografar', {
+        mensagemCriptografada: decryptInput.content,
+        valor_hash: decryptInput.valor_hash,
+        usuario_id: usuarioId,
+        passos: found.step,
+      });
+
+      const { mensagemOriginal } = res.data;
+
+      setEncryptedMessages(prev =>
+        prev.map(msg =>
+          msg.valor_hash === decryptInput.valor_hash
+            ? { ...msg, used: true, decrypted: mensagemOriginal }
+            : msg
+        )
+      );
+
+      setDecryptInput({ content: '', valor_hash: '' });
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao descriptografar');
+    }
   };
 
   return (
@@ -75,6 +129,8 @@ export function Home() {
           <span>Cripto César</span>
         </a>
       </div>
+
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
       {/* Criptografar */}
       <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
@@ -90,7 +146,7 @@ export function Home() {
           placeholder="Passo (ex: 3)"
           value={step}
           min={1}
-          onChange={(e) => setStep(parseInt(e.target.value))}
+          onChange={(e) => setStep(Number(e.target.value))}
         />
         <button className={styles.button} type="button" onClick={handleEncrypt}>
           Criptografar
@@ -101,9 +157,9 @@ export function Home() {
       <div className={styles.messageList}>
         <h3>Mensagens criptografadas</h3>
         {encryptedMessages.map((msg) => (
-          <div key={msg.id} className={styles.messageItem}>
+          <div key={msg.valor_hash} className={styles.messageItem}>
             <p><strong>Mensagem criptografada:</strong> {msg.content}</p>
-            <p><strong>Hash:</strong> {msg.hash}</p>
+            <p><strong>Hash:</strong> {msg.valor_hash}</p>
             <p><strong>Passo:</strong> {msg.step}</p>
             {msg.decrypted && <p className={styles.decrypted}><strong>Descriptografado:</strong> {msg.decrypted}</p>}
             {msg.used && <p style={{ color: 'red' }}><strong>Hash já utilizado</strong></p>}
@@ -123,8 +179,8 @@ export function Home() {
         <input
           type="text"
           placeholder="Hash"
-          value={decryptInput.hash}
-          onChange={(e) => setDecryptInput({ ...decryptInput, hash: e.target.value })}
+          value={decryptInput.valor_hash}
+          onChange={(e) => setDecryptInput({ ...decryptInput, valor_hash: e.target.value })}
         />
         <button className={styles.button} type="button" onClick={handleDecrypt}>
           Decriptografar

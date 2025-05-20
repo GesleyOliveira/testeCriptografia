@@ -1,10 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import { promisePool } from '../db/db';
 
-export const cifraDeCesarMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { hash, mensagem, usuario_id, passos } = req.body;
+export const cifraDeCesarMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { valor_hash, mensagem, usuario_id, passos } = req.body;
 
-  if (typeof hash !== 'string' ||typeof passos !== 'number' || typeof mensagem !== 'string' || typeof usuario_id !== 'number') {
+  if (
+    typeof valor_hash !== 'string' ||
+    typeof passos !== 'number' ||
+    typeof mensagem !== 'string' ||
+    typeof usuario_id !== 'number'
+  ) {
     res.status(400).json({
       error: 'Esperado: hash (string), mensagem (string), passos (number) e usuario_id (number).'
     });
@@ -12,20 +21,30 @@ export const cifraDeCesarMiddleware = async (req: Request, res: Response, next: 
   }
 
   try {
-    // 1. Verifica se o hash existe e está válido
+    // Tenta buscar o hash no banco
     const [hashResult] = await promisePool.query(
-      'SELECT id, passos, valido FROM hashes WHERE id = ? AND valido = TRUE',
-      [hash]
+      'SELECT valor_hash, passos, valido FROM hashes WHERE valor_hash = ?',
+      [valor_hash]
     ) as any;
 
+    let passosUsar = passos;
+
     if (hashResult.length === 0) {
-      res.status(400).json({ error: 'Hash inválido ou já utilizado.' });
-      return;
+      // Se não existir, insere com valido = TRUE
+      await promisePool.query(
+        'INSERT INTO hashes (valor_hash, passos, valido) VALUES (?, ?, TRUE)',
+        [valor_hash, passos]
+      );
+    } else {
+      const hash = hashResult[0];
+      if (!hash.valido) {
+        res.status(400).json({ error: 'Hash já foi utilizado.' });
+        return;
+      }
+      passosUsar = hash.passos;
     }
 
-    const { passos } = hashResult[0];
-
-    // 2. Cifra de César
+    // Função para cifrar a mensagem
     const cifra = (texto: string, deslocamento: number): string => {
       return texto.split('').map(char => {
         if (/[a-z]/.test(char)) {
@@ -38,23 +57,23 @@ export const cifraDeCesarMiddleware = async (req: Request, res: Response, next: 
       }).join('');
     };
 
-    const mensagemCriptografada = cifra(mensagem, passos);
+    const mensagemCriptografada = cifra(mensagem, passosUsar);
 
-    // 3. Salva a mensagem
+    // Insere a mensagem criptografada
     await promisePool.query(
-      'INSERT INTO mensagens (passos, mensagem, valor_hash, usuario_id) VALUES (?, ?, ?, ?)',
-      [passos, mensagemCriptografada, hash, usuario_id]
+      'INSERT INTO mensagens ( mensagem, valor_hash, usuario_id) VALUES ( ?, ?, ?)',
+      [ mensagemCriptografada, valor_hash, usuario_id]
     );
 
-    // 4. Invalida o hash
+    // Marca o hash como usado
     await promisePool.query(
-      'UPDATE hashes SET valido = FALSE WHERE id = ?',
-      [hash]
+      'UPDATE hashes SET valido = FALSE WHERE valor_hash = ?',
+      [valor_hash]
     );
 
-    // 5. Continua o fluxo
     req.body.mensagemCriptografada = mensagemCriptografada;
     next();
+
   } catch (err) {
     console.error('Erro no middleware de cifra:', err);
     res.status(500).json({ error: 'Erro interno ao criptografar a mensagem.' });
