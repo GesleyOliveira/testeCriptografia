@@ -2,11 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { promisePool } from '../db/db';
 
 export const cifraDeCesarMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { hash, mensagem, usuario_id } = req.body;
+  const { hash, mensagem, usuario_id, passos } = req.body;
 
-  if (typeof hash !== 'string' || typeof mensagem !== 'string' || typeof usuario_id !== 'number') {
+  if (typeof hash !== 'string' ||typeof passos !== 'number' || typeof mensagem !== 'string' || typeof usuario_id !== 'number') {
     res.status(400).json({
-      error: 'Esperado: hash (string), mensagem (string) e usuario_id (number).'
+      error: 'Esperado: hash (string), mensagem (string), passos (number) e usuario_id (number).'
     });
     return;
   }
@@ -42,8 +42,8 @@ export const cifraDeCesarMiddleware = async (req: Request, res: Response, next: 
 
     // 3. Salva a mensagem
     await promisePool.query(
-      'INSERT INTO mensagens (mensagem, valor_hash, usuario_id) VALUES (?, ?, ?)',
-      [mensagemCriptografada, hash, usuario_id]
+      'INSERT INTO mensagens (passos, mensagem, valor_hash, usuario_id) VALUES (?, ?, ?, ?)',
+      [passos, mensagemCriptografada, hash, usuario_id]
     );
 
     // 4. Invalida o hash
