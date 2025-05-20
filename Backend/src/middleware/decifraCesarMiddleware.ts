@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { promisePool } from '../db/db';
 
-export const decifraMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const decifraMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const { mensagemCriptografada } = req.body;
 
   if (typeof mensagemCriptografada !== 'string') {
@@ -10,12 +14,12 @@ export const decifraMiddleware = async (req: Request, res: Response, next: NextF
   }
 
   try {
-    // Busca o valor_hash e os passos do hash relacionado à mensagem
+    // Corrigido o JOIN para usar valor_hash em ambas as tabelas (VARCHAR)
     const [rows] = await promisePool.query(
       `
       SELECT h.id AS hash_id, h.passos
       FROM mensagens m
-      INNER JOIN hashes h ON m.valor_hash = h.id
+      INNER JOIN hashes h ON m.valor_hash = h.valor_hash
       WHERE m.mensagem = ?
       LIMIT 1
       `,
@@ -29,7 +33,7 @@ export const decifraMiddleware = async (req: Request, res: Response, next: NextF
 
     const { hash_id, passos } = rows[0];
 
-    // Função para decifrar (Cifra de César reversa)
+    // Função para decifrar com Cifra de César reversa
     const decifra = (texto: string, deslocamento: number): string => {
       return texto.split('').map(char => {
         if (/[a-z]/.test(char)) {
@@ -44,7 +48,7 @@ export const decifraMiddleware = async (req: Request, res: Response, next: NextF
 
     const mensagemOriginal = decifra(mensagemCriptografada, passos);
 
-    // Anexa dados ao request para o próximo middleware ou rota
+    // Anexa ao request para os próximos middlewares/handlers
     req.body.hash = hash_id;
     req.body.passos = passos;
     req.body.mensagemOriginal = mensagemOriginal;
